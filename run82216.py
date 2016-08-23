@@ -7,7 +7,7 @@ import time
 import pdb
 import matplotlib.pyplot as plt
 from func82216 import *
-Z_list = []
+Z_list = [ ]
 #set initial upper bound Zub
 Zub = float("inf")
 #Zub=763500
