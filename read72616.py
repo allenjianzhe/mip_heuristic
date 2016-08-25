@@ -24,7 +24,7 @@ def getC(nodes, modes, departure):
                 for s in departure:
                     C[n, k, s] = fix_C
     return C, fix_C
-o = open(r'C:\Users\MacBook Air\Desktop\my research\cus_5_5.csv', 'r')  # apple
+o = open(r'C:\Users\MacBook Air\Desktop\my research\cus_200_5.csv', 'r')  # apple
 # o=open(r'C:\Users\zjian\Desktop\my research\cus_3.csv','r')
 reader = csv.reader(o)
 # header = reader.next()

@@ -107,7 +107,7 @@ def MIP2(m,customer):
                 for from_u in all_node_from_u:
                     # print '-z_%s_%s'%(u,from_u)
                     expr1.addTerms(-1, z[int(row[0]), u, from_u])
-            m.addConstr(expr1,GRB.EQUAL,0, name="in_out_rule_at_%s"%u)
+            m.addConstr(expr1,GRB.EQUAL,0, name="in_out_rule_at_%d_%d"%(row[0],u))
     m.update()
     #constraint, flow balance, all to the end
     for row in customer:
@@ -148,16 +148,18 @@ def MIP2(m,customer):
                 expr1.addTerms(1, t[int(row[0]), u])
                 expr1.add(G[u][v]['ST'] - M*(1 - y[int(row[0]), u, v]))
                 m.addConstr(expr1, GRB.LESS_EQUAL, t[int(row[0]), v])
-    m.update()    
-    m.__data = X, y, t, TD, ending_time
+    m.update()
+    # m.setParam('MIPGap',.02)
+    m.optimize()    
+    m.__data = X, y, t, TD, ending_time,m.objVal
     return m
 ####################################################################################################
 if __name__ == '__main__':
     m = Model("MIP2")
     MIP2(m,customer)
-    m.setParam('MIPGap',.02)
+    
     # m.setParam('TimeLimit', 60)
-    m.optimize()
+    
     # print(id(m))
     m.write('./my_model.lp')
     m.write('./my_model_sol.sol')
@@ -165,7 +167,7 @@ if __name__ == '__main__':
     # m.optimize(my_model_callback)
     # if m.MIPGAP<=0.02:
     #     exit()
-    X,y,t,TD,ending_time=m.__data
+    X,y,t,TD,ending_time,obj=m.__data
 ##    q=m.objVal
 ##    print q,'$$$$$$$$$$$'
     ##print "\n"
@@ -174,22 +176,23 @@ if __name__ == '__main__':
         print 'Customer',int(row[0]),'Destination ',row[1], 'quantity ',int(row[2]),'DD',int(row[3]),'penalty',int(row[4]),'Tardiness',TD[int(row[0])].x
     print "\n"
     ####print 'Summary solution'                    
-    threePLCost=0
-    TransCost=0
-    TotalTransCost=0
-    TotalTardinessCost=0
-    TotalCost=0
-    with open('c:/Users/MacBook Air/Desktop/output_mip.txt', 'w') as mip_out:
+    # threePLCost=0
+    # TransCost=0
+    # TotalTransCost=0
+    # TotalTardinessCost=0
+    # TotalCost=0
+    with open('c:/Users/MacBook Air/Desktop/output_mip2.txt', 'w') as mip_out:
+        mip_out.write('Total_Cost %r\n'%(obj))
         if m.status == GRB.status.OPTIMAL:
             for row in customer:
                 #print 'Customer',int(row[0]),'Tardiness',T[int(row[0])].x
-                TotalTardinessCost+=TD[int(row[0])].x*int(row[4])*int(row[2])
+                # TotalTardinessCost+=TD[int(row[0])].x*int(row[4])*int(row[2])
                 for (u,v) in G.edges():
                     if y[int(row[0]),u,v].x>0:
                         print 'Customer',int(row[0]),'arc',(u,v),' using 3PL','Trans_cost',F*int(row[2])
                         mip_out.write('Customer %d arc %r using 3PL Trans_cost %d\n'%(int(row[0]),(u,v),F*int(row[2])))
-                        threePLCost+=F*int(row[2])        
-        TotalTransCost=0
+                        # threePLCost+=F*int(row[2])        
+        # TotalTransCost=0
         for row in customer:
             for (u,v) in G.edges():
                 # print (u,v)
@@ -198,18 +201,19 @@ if __name__ == '__main__':
                         if X[int(row[0]),u,v,k,s].x > 0:
                             print 'Customer',int(row[0]),'link',(u,v),'arc_mode_num',k,'departureTimeIndex',s,'arc_cost',G[u][v]['f',k]*int(row[2]),'start_Time',G[u][v]['dT',k,s],'Trans_time',G[u][v]['tau',k],'t',t[int(row[0]),v].x,'real_arrive_time',G[u][v]['dT',k,s]+G[u][v]['tau',k]
                             mip_out.write('Customer %d link %r arc_mode_num %d departureTimeIndex %d f %d start_Time %d tau %d t %f real_arrive_time %f\n'%(int(row[0]),(u,v),k,s,G[u][v]['f',k]*int(row[2]),G[u][v]['dT',k,s],G[u][v]['tau',k],t[int(row[0]),v].x,G[u][v]['dT',k,s]+G[u][v]['tau',k]))
-                            TransCost+=G[u][v]['f',k]*int(row[2])
-    TotalTransCost=TransCost+threePLCost
-    TotalCost=  TotalTardinessCost+   TotalTransCost
+                            # TransCost+=G[u][v]['f',k]*int(row[2])
+    # TotalTransCost=TransCost+threePLCost
+    # TotalCost=  TotalTardinessCost+   TotalTransCost
     print '\n'
-    print 'Basic info'
+    # print 'Basic info'
     print 'customer size',len(customer)
-    print 'MIP SOLUTION 3 ARCS'
-    print 'Trans_Cost',TransCost
-    print '3PL_Cost',threePLCost
-    print 'Total_Trans_Cost',TotalTransCost
-    print 'Total_Penalty_Cost',TotalTardinessCost
-    print 'Total_Cost',TotalCost
+    print 'total cost', obj
+    # print 'MIP SOLUTION 3 ARCS'
+    # print 'Trans_Cost',TransCost
+    # print '3PL_Cost',threePLCost
+    # print 'Total_Trans_Cost',TotalTransCost
+    # print 'Total_Penalty_Cost',TotalTardinessCost
+    # print 'Total_Cost',TotalCost
     # print 'computer time (seconds): ',time.clock() - float(start_time)
     # print '\n' 
     # for u in G.nodes():

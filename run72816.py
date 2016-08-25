@@ -24,21 +24,17 @@ Zlb_list = []
 Zub_list = []
 pi_trace = {}
 for n,k,s in pi:
-    pi_trace[n,k,s] = [pi[n,k,s]]
-#update the upper bound, get feasible solution
-
-#loop_condition_validate = lambda lamda,delta: lamda>=0.05 and delta!=0
-#while(loop_condition_validate(lamda, delta)):
-    
-while lamda >= 0.005 and delta!=0:
-#while o!=13:
+    pi_trace[n,k,s] = [pi[n,k,s]] 
+# while lamda >= 0.005 and delta!=0:
+while o!=3:
     (C,fix_C) = getC(nodes,modes,departure)
     (m,X,y,t,TD,Z,e1,e2,e3,e4) = MIP(customer,nodes,modes,departure,pi)
-    threePLCost = 0
-    TransCost = 0
-    TotalTransCost = 0
-    TotalTardinessCost = 0
-    TotalCost = 0
+    m.write('./run72816.lp')
+    # threePLCost = 0
+    # TransCost = 0
+    # TotalTransCost = 0
+    # TotalTardinessCost = 0
+    # TotalCost = 0
     #print 'main solution'
     with open('c:/Users/MacBook Air/Desktop/output_infeasible.txt', 'w') as f_out:
         #if m.status == GRB.status.INFEASIBLE:
@@ -47,7 +43,7 @@ while lamda >= 0.005 and delta!=0:
         #m.write('c:\MainModelError72716.ilp')
         if m.status == GRB.status.OPTIMAL:
                 for row in customer:
-                    TotalTardinessCost+=TD[int(row[0])].x*int(row[4])*int(row[2])
+                    # TotalTardinessCost+=TD[int(row[0])].x*int(row[4])*int(row[2])
                     for n in nodes:
                         if n==4:
                             continue
@@ -55,7 +51,7 @@ while lamda >= 0.005 and delta!=0:
                             if y[int(row[0]),n].x>0:
                                     #print 'Customer',int(row[0]),'arc',n,' using 3PL','Trans_cost',F*int(row[2])
                                     f_out.write('Customer %d arc %d using 3PL Trans_cost %d\n'%(int(row[0]),n,F*int(row[2])))
-                                    threePLCost+=F*int(row[2])        
+                                    # threePLCost+=F*int(row[2])        
         for row in customer:
                 for n in nodes:
                     if n==4:
@@ -66,9 +62,9 @@ while lamda >= 0.005 and delta!=0:
                                 if X[int(row[0]),n,k,s].x > 0:
                                     f_out.write('Customer %d link %d arc_mode_num %d departureTimeIndex %d f %d start_Time %d tau %d t %f real_arrive_time %f\n'%(int(row[0]),n,k,s,f[n,k]*int(row[2]),dT[n,k,s],tau[n,k],t[int(row[0]),n].x,dT[n,k,s]+tau[n,k]))
                                     #print 'Customer',int(row[0]),'link',n,'arc_mode_num',k,'departureTimeIndex',s,'f',f[n,k]*int(row[2]),'start_Time',dT[n,k,s],'tau',tau[n,k],'t',t[int(row[0]),n].x,'real_arrive_time',dT[n,k,s]+tau[n,k]
-                                    TransCost+=f[n,k]*int(row[2])
-    TotalTransCost=TransCost+threePLCost
-    TotalCost=  TotalTardinessCost+   TotalTransCost
+                                    # TransCost+=f[n,k]*int(row[2])
+    # TotalTransCost=TransCost+threePLCost
+    # TotalCost=  TotalTardinessCost+   TotalTransCost
     GG={}
     GG_square = 0
     for n in nodes:
@@ -137,11 +133,11 @@ while lamda >= 0.005 and delta!=0:
     #print 'after for loop'
                     
     # print '\n'
-    print all_fixed_x_idxes,'all fix x to 1'
+    # print all_fixed_x_idxes,'all fix x to 1'
     # print '\n'
     #print C,'c','test'*5
-    print '\n'
-    #after all_fixed_x_idxed, we need to update capacity_for_nonfixed.
+    # print '\n'
+    # after all_fixed_x_idxed, we need to update capacity_for_nonfixed.
     customer_demands = dict()
     for row in customer:
         customer_demands[int(row[0])]= int(row[2]) 
@@ -171,6 +167,7 @@ while lamda >= 0.005 and delta!=0:
     yCost_list=[]
     TimeCost_list=[]
     for kkk in customer:
+        print kkk,'kkk'
         this_run_m = Model('MIP_OneCustomer%s')
         #print C,'try C each time'
         this_run_m,X,y,t,TD,obj,e21,e22,e23,e24=MIP_OneCustomer(C,kkk,pi,all_fixed_x_idxes)
@@ -180,12 +177,12 @@ while lamda >= 0.005 and delta!=0:
         TimeCost_list.append(e24.getValue())
         nopicost = e21.getValue()+e23.getValue()+e24.getValue()
         #print nopicost,'nopicost','*'*50
-        print '********************************************'
-        print e21.getValue(),'transporation cost'
-        print e22.getValue(),'pi  cost'
-        print e23.getValue(),'y cost'
-        print e24.getValue(),'Time tardiness cost'
-        print 'cost not include pi cost',nopicost
+        # print '********************************************'
+        # print e21.getValue(),'transporation cost'
+        # print e22.getValue(),'pi  cost'
+        # print e23.getValue(),'y cost'
+        # print e24.getValue(),'Time tardiness cost'
+        # print 'cost not include pi cost',nopicost
         #print '********************************************'
         #threePLCost=0
         #TransCost=0
@@ -230,8 +227,8 @@ while lamda >= 0.005 and delta!=0:
 ##    print 'TimeCost_list',TimeCost_list
 ##    print 'obj_total',obj_total    
     Zub_temple=sum(transCost_list)+sum(yCost_list)+sum(TimeCost_list)
-    print transCost_list
-    print TimeCost_list, '\n','**-'*100
+    # print transCost_list
+    # print TimeCost_list, '\n','**-'*100
     if not Zub_list or Zub_temple <= min(Zub_list):
         with open('c:/Users/MacBook Air/Desktop/output_upperbound.txt', 'w') as f2_out:
         #f2_out.write(y_list)
@@ -247,7 +244,7 @@ while lamda >= 0.005 and delta!=0:
     Zub=min(Zub,Zub_temple)
     #print 'Zub updated',Zub
     Zub_list.append(round(Zub,0))
-    print Zub_list,'test'*50
+    # print Zub_list,'test'*50
 
     Zlb=max(Z,Zlb)
     
@@ -297,9 +294,9 @@ print delta_list,'delta_list'
 print '\n'
 print lamda_list,'lamda_list'
 print '\n'
-Gap_Zlb=0
-Gap_Zub=0
-opt=0
+# Gap_Zlb=0
+# Gap_Zub=0
+# opt=0
 ##if len(customer)==5:
 ##    opt=2088000.0
 ##if len(customer)==10:
@@ -316,8 +313,8 @@ opt=0
 ##Gap_Zlb=(opt-Zlb_list[-1])/opt
 ##Gap_Zub=(Zub_list[-1]-opt)/opt
 
-print 'Gap_Zlb',(format(Gap_Zlb,'.2%'))
-print 'Gap_Zub',(format(Gap_Zub,'.2%'))
+# print 'Gap_Zlb',(format(Gap_Zlb,'.2%'))
+# print 'Gap_Zub',(format(Gap_Zub,'.2%'))
 ##plt.ylabel('pi value')
 ##plt.plot(pi_trace[3,1,1])
 ##plt.show()

@@ -61,7 +61,7 @@ def getDistance():#edge parameter
     Distance[1] = 400
     Distance[2] = 500
     Distance[3] = 700
-    Distance[4] = 800
+    # Distance[4] = 800
     return Distance
 
 
@@ -86,11 +86,11 @@ def getf(nodes, modes, Distance):  # once we know distance, then we know f
         if n == 4:
             continue
         else:
-            for k in modes:
-                f[n, 1] = int(300 * Distance[n] / unit)
-                f[n, 2] = int(500 * Distance[n] / unit)
-                f[n, 3] = int(1500 * Distance[n] / unit)
-                f[n, 4] = int(2000 * Distance[n] / unit)
+            f[n, 1] = int(300 * Distance[n] / unit)
+            f[n, 2] = int(500 * Distance[n] / unit)
+            f[n, 3] = int(1500 * Distance[n] / unit)
+            f[n, 4] = int(2000 * Distance[n] / unit)
+    # print '## fff'*20,f
     return f
 
 

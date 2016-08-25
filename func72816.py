@@ -21,7 +21,7 @@ logging.basicConfig(filename='one_customer.log',level=logging.DEBUG)
 
 
 customer=[]
-d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_5_13.csv')
+d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_20_11.csv')
 # d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_50_21.csv',header=None)
 # print d
 customer = d.values.tolist()
@@ -49,6 +49,8 @@ tau=getTau(nodes,modes,getDistance())
 f={}
 f=getf(nodes,modes,getDistance())
 #print 'f\n',f
+ST={}
+ST = getST(nodes)
 #dT: departure time at each arc
 dT={}
 dT=getdT()
@@ -163,32 +165,44 @@ def MIP(customer,nodes,modes,departure,pi):
 ##            else:
 ##                m.addConstr(y[int(row[0]),n-1],GRB.LESS_EQUAL,y[int(row[0]),n],name='one3pl_%s_%s'%(int(row[0]),n))
 ##    m.update()
-    #constraint 3.5 time constraint One
+    #constraint 3.5 time constraint 17
     for row in customer:        
             for n in nodes:
                 if n==4:
                     continue
                 else: 
-                    expr7 = LinExpr()                
+                    expr = LinExpr()                
                     for k in modes:
                             for s in departure:                                            
-                                    expr7.addTerms(dT[n,k,s]+tau[n,k],X[int(row[0]),n,k,s])
-                    expr7.add(-M*y[int(row[0]),n])
-                    m.addConstr(expr7,GRB.LESS_EQUAL,t[int(row[0]),n],name='timeConstr1_%s_%s'%(int(row[0]),n))                        
+                                    expr.addTerms(dT[n,k,s]+tau[n,k],X[int(row[0]),n,k,s])
+                    # expr.add(-1*y[int(row[0]),n]*M)
+                    m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),n],name='timeConstr1_%s_%s'%(int(row[0]),n))                        
     m.update()                    
+    #constraint 3.6 time constraint 18
     for row in customer:        
-            for n in nodes:                    
-                    expr8 = LinExpr()
-                    if n==1 or n==4:
-                            continue
-                    else:
-                            for k in modes:
-                                    for s in departure:                                            
-                                            expr8.addTerms(dT[n,k,s],X[int(row[0]),n,k,s])
-                            expr8.add(y[int(row[0]),n])
-                            m.addConstr(expr8,GRB.GREATER_EQUAL,t[int(row[0]),n-1],name='timeConstr2_%s_%s'%(int(row[0]),n))
+        for n in nodes:                    
+            expr1 = LinExpr()
+            if n==1 or n==4:
+                continue
+            else:
+                for k in modes:
+                    for s in departure:                                            
+                        expr1.addTerms(dT[n,k,s],X[int(row[0]),n,k,s])
+                expr1.add(y[int(row[0]),n]*M)
+                m.addConstr(expr1,GRB.GREATER_EQUAL,t[int(row[0]),n-1],name='timeConstr2_%s_%s'%(int(row[0]),n))
     m.update()
-    #definition of T
+    #constraint 3.6 time constraint 19
+    for row in customer:        
+        for n in nodes:                    
+            expr1 = LinExpr()
+            if n==1 or n==4:
+                continue
+            else:                                           
+                expr1.addTerms(1,t[int(row[0]),n])
+                expr1.add((1-y[int(row[0]),n])*M-ST[n])
+                m.addConstr(expr1,GRB.GREATER_EQUAL,t[int(row[0]),n-1],name='timeConstr3_%s_%s'%(int(row[0]),n))
+    m.update()
+    #definition of TD
     for row in customer:
         for k in modes:
             for s in departure:
@@ -214,6 +228,7 @@ def MIP_OneCustomer(C,kkk,pi,all_fixed_x_idxes):
                 for s in departure:
                     X[int(row[0]),n,k,s]=m.addVar(vtype=GRB.BINARY,name='X_%s_%s_%s_%s'%(int(row[0]),n,k,s))
     m.update()
+    #set all_fixed_x to be 1
     for n in nodes:
         if n==4:
             continue
@@ -330,8 +345,8 @@ def MIP_OneCustomer(C,kkk,pi,all_fixed_x_idxes):
             for k in modes:
                     for s in departure:                                            
                             expr.addTerms(dT[n,k,s]+tau[n,k],X[int(row[0]),n,k,s])
-            expr.add(-1*y[int(row[0]),n]*M)
-            m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),n],name='timeConstr1_%s_%s'%(int(row[0]),n))                        
+            # expr.add(-1*y[int(row[0]),n]*M)
+            m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),n],name='timeConstrH1_%s_%s'%(int(row[0]),n))                        
     m.update()                    
     #constraint 3.6 time constraint Two
     for n in nodes:                    
@@ -343,7 +358,17 @@ def MIP_OneCustomer(C,kkk,pi,all_fixed_x_idxes):
                             for s in departure:                                            
                                     expr.addTerms(dT[n,k,s],X[int(row[0]),n,k,s])
                     expr.add(y[int(row[0]),n]*M)
-                    m.addConstr(expr,GRB.GREATER_EQUAL,t[int(row[0]),n-1],name='timeConstr2_%s_%s'%(int(row[0]),n))
+                    m.addConstr(expr,GRB.GREATER_EQUAL,t[int(row[0]),n-1],name='timeConstrH2_%s_%s'%(int(row[0]),n))
+    m.update()
+    #constraint 3.6 time constraint 19       
+    for n in nodes:                    
+        expr = LinExpr()
+        if n==1 or n==4:
+            continue
+        else:                                           
+            expr.addTerms(1,t[int(row[0]),n])
+            expr.add((1-y[int(row[0]),n])*M-ST[n])
+            m.addConstr(expr,GRB.GREATER_EQUAL,t[int(row[0]),n-1],name='timeConstrH3_%s_%s'%(int(row[0]),n))
     m.update()
     #definition of T
     for k in modes:
@@ -361,70 +386,70 @@ def MIP_OneCustomer(C,kkk,pi,all_fixed_x_idxes):
     m.write('./original_customer_%s.lp'%row[0])
     m.write('./original_customer_%s.sol'%row[0])
     return m,X,y,t,TD,m.objVal,expr1,expr2,expr3,expr4
-def expr1_value(X):
-    expr1=0
-    for row in customer:
-        for n in nodes:
-            if n==4:
-                continue
-            else:
-                for k in modes:
-                    for s in departure:
-                        expr1=expr1+X[int(row[0]),n,k,s].x*int(row[2])*f[n,k]
-    return expr1
-def expr1_v(X,kkk):
-    expr1=0
-    row=kkk
-    #print kkk,'kkk'
-    #print X
-    for n in nodes:
-        if n==4:
-            continue
-        else:
-            for k in modes:
-                for s in departure:
-                    if X[int(row[0]),n,k,s].x>0:
-                        expr1=expr1+X[int(row[0]),n,k,s].x*int(row[2])*f[n,k]
-    return expr1
-def expr2_value(X,pi):
-    k2=0
-    for k in modes:
-        for s in departure:
-            for n in nodes:
-                a=0
-                if n==4:
-                    continue
-                else:
-                    for row in customer:
-                        if X[int(row[0]),n,k,s].x >0:
-                            a=a+int(row[2])*X[int(row[0]),n,k,s].x
-                    if a==0:#make sure whether X==1, so that we wont add the 0 in the following and make sure a is bigger than 0.
-                        a=a
-                    else:
-                        a=a-C[n,k,s]
-                        #print a,'a', 'after all the customer sum'
-                k2=k2+pi[n,k,s]*a
-    return k2
-def expr2_v(X,pi,kkk):
-    row=kkk
-    k2=0
-    for k in modes:
-        for s in departure:
-            for n in nodes:
-                a=0
-                if n==4:
-                    continue
-                else:
+# def expr1_value(X):
+#     expr1=0
+#     for row in customer:
+#         for n in nodes:
+#             if n==4:
+#                 continue
+#             else:
+#                 for k in modes:
+#                     for s in departure:
+#                         expr1=expr1+X[int(row[0]),n,k,s].x*int(row[2])*f[n,k]
+#     return expr1
+# def expr1_v(X,kkk):
+#     expr1=0
+#     row=kkk
+#     #print kkk,'kkk'
+#     #print X
+#     for n in nodes:
+#         if n==4:
+#             continue
+#         else:
+#             for k in modes:
+#                 for s in departure:
+#                     if X[int(row[0]),n,k,s].x>0:
+#                         expr1=expr1+X[int(row[0]),n,k,s].x*int(row[2])*f[n,k]
+#     return expr1
+# def expr2_value(X,pi):
+#     k2=0
+#     for k in modes:
+#         for s in departure:
+#             for n in nodes:
+#                 a=0
+#                 if n==4:
+#                     continue
+#                 else:
+#                     for row in customer:
+#                         if X[int(row[0]),n,k,s].x >0:
+#                             a=a+int(row[2])*X[int(row[0]),n,k,s].x
+#                     if a==0:#make sure whether X==1, so that we wont add the 0 in the following and make sure a is bigger than 0.
+#                         a=a
+#                     else:
+#                         a=a-C[n,k,s]
+#                         #print a,'a', 'after all the customer sum'
+#                 k2=k2+pi[n,k,s]*a
+#     return k2
+# def expr2_v(X,pi,kkk):
+#     row=kkk
+#     k2=0
+#     for k in modes:
+#         for s in departure:
+#             for n in nodes:
+#                 a=0
+#                 if n==4:
+#                     continue
+#                 else:
 
-                    if X[int(row[0]),n,k,s].x >0:
-                        a=a+int(row[2])*X[int(row[0]),n,k,s].x
-                    if a==0:#make sure whether X==1, so that we wont add the 0 in the following and make sure a is bigger than 0.
-                        a=a
-                    else:
-                        a=a-C[n,k,s]
-                        #print a,'a', 'after all the customer sum'
-                k2=k2+pi[n,k,s]*a
-    return k2
+#                     if X[int(row[0]),n,k,s].x >0:
+#                         a=a+int(row[2])*X[int(row[0]),n,k,s].x
+#                     if a==0:#make sure whether X==1, so that we wont add the 0 in the following and make sure a is bigger than 0.
+#                         a=a
+#                     else:
+#                         a=a-C[n,k,s]
+#                         #print a,'a', 'after all the customer sum'
+#                 k2=k2+pi[n,k,s]*a
+#     return k2
 ##def expr2_v(X_list,pi):
 ##    iks_idx_list = []
 ##    for x in X_list:
@@ -445,82 +470,82 @@ def expr2_v(X,pi,kkk):
 ##            a=a-C[i,k,s]
 ##        k2=k2+pi[i,k,s]*a
 ##    return k2    
-def expr3_value(y):
-    expr3=0
-    for row in customer:
-        for n in nodes:
-            if n==4:
-                continue
-            else:
-                expr3=expr3+y[int(row[0]),n].x*int(row[2])*F
-    return expr3
-def expr3_v(y,kkk):
-    row=kkk
-    expr3=0
+# def expr3_value(y):
+#     expr3=0
+#     for row in customer:
+#         for n in nodes:
+#             if n==4:
+#                 continue
+#             else:
+#                 expr3=expr3+y[int(row[0]),n].x*int(row[2])*F
+#     return expr3
+# def expr3_v(y,kkk):
+#     row=kkk
+#     expr3=0
 
-    for n in nodes:
-        if i==n:
-            continue
-        else:
-            expr3=expr3+y[int(row[0]),n].x*int(row[2])*M
-    return expr3
-def expr4_value(T):
-    expr4=0
-    for row in customer:
-        expr4=expr4+TD[int(row[0])].x*int(row[2])*int(row[4])
-    return expr4
-def expr4_v(T,kkk):
-    row=kkk
-    expr4=0
-    expr4=expr4+TD[int(row[0])].x*int(row[2])*int(row[4])
-    return expr4
-#here def Transfer help me to get the X1, X2, X3 and y from the MIP so that i can consider them as input to the H. 
-def Transfer(X,y):
-    for row in customer:
-        for n in nodes:
-            if n==4:
-                continue
-            else:
-                if y[int(row[0]),n].x==1:
-                    a=[]
-                    a.append(int(row[0]))
-                    a.append(n)
-                    yy.append(a)
-    for n in nodes:
-        if n==4:
-            continue
-        else:
-            if n==1:
-                for row in customer:
-                    for k in modes:
-                        for s in departure:
-                            if X[int(row[0]),n,k,s].x==1:
-                                a=[]
-                                a.append(int(row[0]))
-                                a.append(k)
-                                a.append(s)
-                                XX1.append(a)
-            if n==2:
-                for row in customer:
-                    for k in modes:
-                        for s in departure:
-                            if X[int(row[0]),n,k,s].x==1:
-                                a=[]
-                                a.append(int(row[0]))
-                                a.append(k)
-                                a.append(s)
-                                XX2.append(a)
-            if n==3:
-                for row in customer:
-                    for k in modes:
-                        for s in departure:
-                            if X[int(row[0]),nf,k,s].x==1:
-                                a=[]
-                                a.append(int(row[0]))
-                                a.append(k)
-                                a.append(s)
-                                XX3.append(a) 
-    return yy, XX1, XX2, XX3
+#     for n in nodes:
+#         if i==n:
+#             continue
+#         else:
+#             expr3=expr3+y[int(row[0]),n].x*int(row[2])*M
+#     return expr3
+# def expr4_value(T):
+#     expr4=0
+#     for row in customer:
+#         expr4=expr4+TD[int(row[0])].x*int(row[2])*int(row[4])
+#     return expr4
+# def expr4_v(T,kkk):
+#     row=kkk
+#     expr4=0
+#     expr4=expr4+TD[int(row[0])].x*int(row[2])*int(row[4])
+#     return expr4
+# #here def Transfer help me to get the X1, X2, X3 and y from the MIP so that i can consider them as input to the H. 
+# def Transfer(X,y):
+#     for row in customer:
+#         for n in nodes:
+#             if n==4:
+#                 continue
+#             else:
+#                 if y[int(row[0]),n].x==1:
+#                     a=[]
+#                     a.append(int(row[0]))
+#                     a.append(n)
+#                     yy.append(a)
+#     for n in nodes:
+#         if n==4:
+#             continue
+#         else:
+#             if n==1:
+#                 for row in customer:
+#                     for k in modes:
+#                         for s in departure:
+#                             if X[int(row[0]),n,k,s].x==1:
+#                                 a=[]
+#                                 a.append(int(row[0]))
+#                                 a.append(k)
+#                                 a.append(s)
+#                                 XX1.append(a)
+#             if n==2:
+#                 for row in customer:
+#                     for k in modes:
+#                         for s in departure:
+#                             if X[int(row[0]),n,k,s].x==1:
+#                                 a=[]
+#                                 a.append(int(row[0]))
+#                                 a.append(k)
+#                                 a.append(s)
+#                                 XX2.append(a)
+#             if n==3:
+#                 for row in customer:
+#                     for k in modes:
+#                         for s in departure:
+#                             if X[int(row[0]),nf,k,s].x==1:
+#                                 a=[]
+#                                 a.append(int(row[0]))
+#                                 a.append(k)
+#                                 a.append(s)
+#                                 XX3.append(a) 
+#     return yy, XX1, XX2, XX3
 def plot_Zub(Zub_list):
     y1=Zub_list
     plt.ylabel('Zub')

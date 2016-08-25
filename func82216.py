@@ -16,7 +16,7 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 from read81616 import *
-
+# from read82316 import *
 #sub method key variable pi, change every round,related with i,k,s
 pi={}#i=0,1,2,3; k=1,2,3,4; s=1,2,3,4,5,6
 #initial pi has been set to 0 
@@ -32,7 +32,7 @@ def MIP(customer,G,modes,pi):
         for (u,v) in G.edges():
             for k in modes:
                 for s in departure:
-                    X[int(row[0]),u,v,k,s]=m.addVar(vtype=GRB.BINARY,name="X_%s_%s_%s_%s"%(row[0],u,k,s))
+                    X[int(row[0]),u,v,k,s]=m.addVar(vtype=GRB.BINARY,name="X_%d_%d_%d_%d"%(row[0],u,k,s))
     m.update()
     #expr1:the transportation cost related with X    
     expr1=LinExpr()
@@ -57,7 +57,7 @@ def MIP(customer,G,modes,pi):
     y={}
     for row in customer:
         for (u,v) in G.edges():
-            y[int(row[0]),u,v]=m.addVar(vtype=GRB.BINARY,name="y_%s_%s"%(row[0],u))     
+            y[int(row[0]),u,v]=m.addVar(vtype=GRB.BINARY,name="y_%d_%d"%(row[0],u))     
     m.update()
     #expr3:cost related with y, 3PL
     expr3=LinExpr()
@@ -68,7 +68,7 @@ def MIP(customer,G,modes,pi):
     z={}
     for row in customer:
         for (u,v) in G.edges():
-            z[int(row[0]),u,v] = m.addVar(obj = 0 , vtype=GRB.BINARY, name="z_%s_%s"%(row[0],u))
+            z[int(row[0]),u,v] = m.addVar(obj = 0 , vtype=GRB.BINARY, name="z_%d_%d"%(row[0],u))
     m.update()        
     #decision variable: arrive time at each node.
     #t[int(row[0]),i] is arrive time of customer int(row[0]) at arc i.
@@ -76,13 +76,13 @@ def MIP(customer,G,modes,pi):
     for row in customer:
         for u in G.nodes():
             if u!=1:
-                t[int(row[0]),u]=m.addVar(obj=0,vtype='C', name="t_%s_%s"%(row[0],u))
+                t[int(row[0]),u]=m.addVar(obj=0,vtype='C', name="t_%d_%d"%(row[0],u))
     m.update()
     #decision variable:Time tardiness of customer
     #T[int(row[0])] is tardiness of customer int(row[0])
     TD={}
     for row in customer:
-            TD[int(row[0])]=m.addVar(vtype='C',name='Tardiness_%s'%(int(row[0])))
+            TD[int(row[0])]=m.addVar(vtype='C',name='Tardiness_%d'%int(row[0]))
     m.update()
     #expr4:cost of time tardiness penalty 
     expr4=LinExpr()
@@ -91,11 +91,9 @@ def MIP(customer,G,modes,pi):
     #######################################
     m.setObjective(expr1+expr2+expr3+expr4)
     #######################################    
-    #constraint 2, definition of T
+    #constraint 2, definition of TD
     for row in customer:
-        for k in modes:
-            for s in departure:
-                m.addConstr(TD[int(row[0])],GRB.EQUAL,t[int(row[0]),len(G.nodes())]-int(row[3]),name="TD_%s"%row[0])
+        m.addConstr(TD[int(row[0])],GRB.EQUAL,t[int(row[0]),len(G.nodes())]-int(row[3]),name="TD_%s"%row[0])
     m.update()
     #Constraint 3,  for each customer, each link, only one mode can be selected
     for row in customer:
@@ -105,7 +103,7 @@ def MIP(customer,G,modes,pi):
                     for s in departure:
                             expr.addTerms(1.0,X[int(row[0]),u,v,k,s])
             expr.add(y[int(row[0]),u,v])
-            m.addConstr(expr, GRB.EQUAL, z[int(row[0]),u,v],name="OnlyOneMode")
+            m.addConstr(expr, GRB.EQUAL, z[int(row[0]),u,v],name="OnlyOneMode_%s_%d"%(row[0],u))
     m.update()
     # #constraint 4,  arc capacity
     # for k in modes:
@@ -122,22 +120,22 @@ def MIP(customer,G,modes,pi):
         expr = LinExpr()
         for v in G.neighbors(1):
             expr.addTerms(1,z[int(row[0]),1,v])
-        m.addConstr(expr,GRB.EQUAL,1,name="StarToAll")
+        m.addConstr(expr,GRB.EQUAL,1,name="StarToAll_%s"%row[0])
     m.update()
     #constraint 6, flow balance
     for row in customer:        
         for u in G.nodes():
-            expr1 = LinExpr()
+            expr5 = LinExpr()
             if u!=1 and u!=len(G.nodes()):
                 all_node_to_u = [u1 for (u1,v1) in G.edges() if v1 == u]
                 for to_u in all_node_to_u:
                     # print 'z_%s_%s'%(to_u,u)
-                    expr1.addTerms(1, z[int(row[0]), to_u, u])
+                    expr5.addTerms(1, z[int(row[0]), to_u, u])
                 all_node_from_u = [v1 for (u1,v1) in G.edges() if u1 == u]
                 for from_u in all_node_from_u:
                     # print '-z_%s_%s'%(u,from_u)
-                    expr1.addTerms(-1, z[int(row[0]), u, from_u])
-            m.addConstr(expr1,GRB.EQUAL,0, name="in_out_rule_at_%s"%u)
+                    expr5.addTerms(-1, z[int(row[0]), u, from_u])
+            m.addConstr(expr5,GRB.EQUAL,0, name="in_out_rule_%d_%d"%(row[0],u))
     m.update()
     #constraint, flow balance, all to the end
     for row in customer:
@@ -147,7 +145,7 @@ def MIP(customer,G,modes,pi):
         for u in nodes_to_end:
             if u!=len(G.nodes()):
                 expr.addTerms(1,z[int(row[0]),u,len(G.nodes())])
-        m.addConstr(expr,GRB.EQUAL,1,name="AlltoEnd")
+        m.addConstr(expr,GRB.EQUAL,1,name="AlltoEnd_%s"%row[0])
     m.update()
     #constraint 7, time constraint 
     for row in customer:        
@@ -157,27 +155,27 @@ def MIP(customer,G,modes,pi):
                         for s in departure:                                            
                                 expr.addTerms(G[u][v]['dT',k,s]+G[u][v]['tau',k],X[int(row[0]),u,v,k,s])
                 # expr.add(-1*y[int(row[0]),u,v]*M)
-                m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),v],name="Time7")                        
+                m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),v],name="Time7_%s_%d"%(row[0],u))                        
     m.update()                    
     #constraint 8, time constraint 
     for row in customer:        
         for (u,v) in G.edges(): 
             if u != 1:                   
-                expr1 = LinExpr()
+                expr = LinExpr()
                 for k in modes:
-                        for s in departure:                                            
-                                expr1.addTerms(G[u][v]['dT',k,s],X[int(row[0]),u,v,k,s])
+                    for s in departure:                                            
+                        expr.addTerms(G[u][v]['dT',k,s],X[int(row[0]),u,v,k,s])
                 expr1.add((1+y[int(row[0]),u,v]-z[int(row[0]),u,v])*M)
-                m.addConstr(expr1,GRB.GREATER_EQUAL,t[int(row[0]),u],name="Time8")
+                m.addConstr(expr,GRB.GREATER_EQUAL,t[int(row[0]),u],name="Time8_%s_%d"%(row[0],u))
     m.update()
     #constraint 9, time constraint 
     for row in customer:
         for (u,v) in G.edges():
             if u != 1:
-                expr1 = LinExpr()
-                expr1.addTerms(1, t[int(row[0]), u])
-                expr1.add(G[u][v]['ST'] - M*(1 - y[int(row[0]), u, v]))
-                m.addConstr(expr1, GRB.LESS_EQUAL, t[int(row[0]), v],name="Time9")
+                expr = LinExpr()
+                expr.addTerms(1, t[int(row[0]), u])
+                expr.add(G[u][v]['ST'] - M*(1 - y[int(row[0]), u, v]))
+                m.addConstr(expr, GRB.LESS_EQUAL, t[int(row[0]), v],name="Time9_%s_%d"%(row[0],u))
     m.update()
     m.optimize()
     return m,X,y,t,TD,m.objVal,expr1,expr2,expr3,expr4
@@ -191,8 +189,9 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     for (u,v) in G.edges():
         for k in modes:
             for s in departure:
-                X[int(row[0]),u,v,k,s]=m.addVar(vtype=GRB.BINARY,name="XH_%s_%s_%s_%s"%(row[0],u,k,s))
+                X[int(row[0]),u,v,k,s]=m.addVar(vtype=GRB.BINARY,name="XH_%d_%d_%d_%d"%(row[0],u,k,s))
     m.update()
+    #set all_fixed_x to be 1
     for (u,v) in G.edges():
         for k in modes:
             for s in departure:
@@ -210,7 +209,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     m.update()
     y={}       
     for (u,v) in G.edges():
-        y[int(row[0]),u,v]=m.addVar(vtype=GRB.BINARY,name="yH_%s_%s"%(row[0],u))     
+        y[int(row[0]),u,v]=m.addVar(vtype=GRB.BINARY,name="yH_%d_%d"%(row[0],u))     
     m.update()
     #expr2:cost with pi
     expr2 = LinExpr()
@@ -225,7 +224,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     #decision variable z: binary variable of route chosen
     z={}
     for (u,v) in G.edges():
-        z[int(row[0]),u,v] = m.addVar(obj = 0 , vtype=GRB.BINARY, name="zH_%s_%s"%(row[0],u))
+        z[int(row[0]),u,v] = m.addVar(obj = 0 , vtype=GRB.BINARY, name="zH_%s_%d"%(row[0],u))
     m.update()
     #expr3:cost related with y, 3PL
     expr3=LinExpr()        
@@ -237,12 +236,12 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     t={}
     for u in G.nodes():
         if u!=1:
-            t[int(row[0]),u]=m.addVar(obj=0,vtype='C', name="tH_%s_%s"%(row[0],u))  
+            t[int(row[0]),u]=m.addVar(obj=0,vtype='C', name="tH_%s_%d"%(row[0],u))  
     m.update()
     #decision variable:Time tardiness of customer
     #T[int(row[0])] is tardiness of customer int(row[0])
     TD={}        
-    TD[int(row[0])]=m.addVar(vtype='C',name='TardinessH_%s'%(int(row[0])))
+    TD[int(row[0])]=m.addVar(vtype='C',name='TardinessH_%d'%int(row[0]))
     m.update()
     #expr4:cost of time tardiness penalty 
     expr4=LinExpr()       
@@ -252,25 +251,17 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     #m.setObjective(expr1+expr2+expr3+expr4)
     m.setObjective(expr1+expr2+expr3+expr4)
     #######################################
-    #constraint 2, definition of T
-
-    for k in modes:
-        for s in departure:
-            # print row[0],row[3]
-            # print TD
-            # print TD[int(row[0])]
-            # print t[int(row[0]),len(G.nodes())]
-
-            m.addConstr(TD[int(row[0])],GRB.EQUAL,t[int(row[0]),len(G.nodes())]-int(row[3]),name="TDH_%s"%row[0])
+    #constraint 2, definition of TD
+    m.addConstr(TD[int(row[0])],GRB.EQUAL,t[int(row[0]),len(G.nodes())]-int(row[3]),name="TDH_%s"%row[0])
     m.update()
     #Constraint 3.2 for each customer, each link, only one plan can be selected        
     for (u,v) in G.edges():
-            expr = LinExpr()       
-            for k in modes:
-                    for s in departure:
-                            expr.addTerms(1.0,X[int(row[0]),u,v,k,s])
-            expr.add(y[int(row[0]),u,v])
-            m.addConstr(expr, GRB.EQUAL, z[int(row[0]),u,v],name="OnlyOneH")
+        expr = LinExpr()       
+        for k in modes:
+                for s in departure:
+                        expr.addTerms(1.0,X[int(row[0]),u,v,k,s])
+        expr.add(y[int(row[0]),u,v])
+        m.addConstr(expr, GRB.EQUAL, z[int(row[0]),u,v],name="OnlyOneH_%d"%u)
     m.update()
     #constraint 3.4 arc capacity
     for k in modes:
@@ -279,7 +270,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
                 expr = LinExpr()
                 expr.addTerms(int(row[2]),X[int(row[0]),u,v,k,s])
                 expr.addConstant(-1*G[u][v]['C',k,s])
-                m.addConstr(expr,GRB.LESS_EQUAL, 0,'arcCapacityH_%r_%r_%r_%r'%(int(row[0]),u,k,s))      
+                m.addConstr(expr,GRB.LESS_EQUAL, 0,'arcCapacityH_%r_%d_%d_%d'%(int(row[0]),u,k,s))      
     m.update()                                         
     #constraint 5, flow balance, all to start
     expr = LinExpr()
@@ -288,9 +279,10 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     m.addConstr(expr,GRB.EQUAL,1)
     m.update()
     #constraint 6, flow balance
-    expr5 = LinExpr()
-    expr6 = LinExpr()
+    
     for u in G.nodes():
+        expr5 = LinExpr()
+        expr6 = LinExpr()
         if u!=1 and u!=len(G.nodes()):
             all_node_to_u = [u1 for (u1,v1) in G.edges() if v1 == u]
             for to_u in all_node_to_u:
@@ -298,7 +290,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
             all_node_from_u = [v1 for (u1,v1) in G.edges() if u1 == u]
             for from_u in all_node_from_u:
                 expr6.addTerms(1, z[int(row[0]), u, from_u])
-    m.addConstr(expr5,GRB.EQUAL,expr6, name="in_out_H_%s"%u)
+        m.addConstr(expr5,GRB.EQUAL,expr6, name="in_out_H_%d"%u)
     m.update()
     #constraint, flow balance, all to the end
     expr = LinExpr()
@@ -307,7 +299,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
     for u in nodes_to_end:
         if u!=len(G.nodes()):
             expr.addTerms(1,z[int(row[0]),u,len(G.nodes())])
-    m.addConstr(expr,GRB.EQUAL,1,name="AlltoEndH")
+    m.addConstr(expr,GRB.EQUAL,1,name="AlltoEndH_%d"%u)
     m.update()
     #constraint 7, time constraint       
     for (u,v) in G.edges():
@@ -316,7 +308,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
             for s in departure:                                            
                 expr.addTerms(G[u][v]['dT',k,s]+G[u][v]['tau',k],X[int(row[0]),u,v,k,s])
         # expr.add(-1*y[int(row[0]),u,v]*M)
-        m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),v],name="Time7H")                        
+        m.addConstr(expr,GRB.LESS_EQUAL,t[int(row[0]),v],name="Time7H_%d"%u)                        
     m.update()                    
     #constraint 8, time constraint        
     for (u,v) in G.edges(): 
@@ -326,7 +318,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
                 for s in departure:                                            
                     expr7.addTerms(G[u][v]['dT',k,s],X[int(row[0]),u,v,k,s])
             expr7.add((1+y[int(row[0]),u,v]-z[int(row[0]),u,v])*M)
-            m.addConstr(expr7,GRB.GREATER_EQUAL,t[int(row[0]),u],name="Time8H")
+            m.addConstr(expr7,GRB.GREATER_EQUAL,t[int(row[0]),u],name="Time8H_%d"%u)
     m.update()
     #constraint 9, time constraint 
     for (u,v) in G.edges():
@@ -334,7 +326,7 @@ def MIP_OneCustomer(G,kkk,pi,all_fixed_x_idxes):
             expr8 = LinExpr()
             expr8.addTerms(1, t[int(row[0]), u])
             expr8.add(G[u][v]['ST'] - M*(1 - y[int(row[0]), u, v]))
-            m.addConstr(expr8, GRB.LESS_EQUAL, t[int(row[0]), v],name="Time9H")
+            m.addConstr(expr8, GRB.LESS_EQUAL, t[int(row[0]), v],name="Time9H_%d"%u)
     m.update()
     m.optimize()
     if m.status == GRB.status.INFEASIBLE:

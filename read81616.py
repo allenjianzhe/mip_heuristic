@@ -7,16 +7,12 @@ import random
 import pandas as pd
 G = nx.DiGraph()
 M = 1000000000
-F = 1250
+# F = 1250
+F = 9000
 modes = [1, 2, 3, 4]
 departure = [1,2]
 G.add_nodes_from([1,2,3,4])
 G.add_edges_from([(1,2),(2,3),(3,4)])
-#define edge attributes
-def getGdistance(G):	
-	G[1][2]['distance'] = 400
-	G[2][3]['distance'] = 500
-	G[3][4]['distance'] = 700
 def customer_shuffle(seed,customer):
     random.seed(seed)
     # d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_5_13.csv')
@@ -49,12 +45,17 @@ def customer_DpDDshuffle(seed,customer):
     samples = numpy.random.choice(len(customer),size=len(customer),replace=False,p=weight)
     customer = [customer[i] for i in samples]
     return customer
-fix_C = 1000
+fix_C = 4000
 def getGC(G,fix_C):
 	for (u,v) in G.edges():
 		for k in modes:
 			for s in departure:
 				G[u][v]['C',k,s] = fix_C
+#define edge attributes
+def getGdistance(G):	
+	G[1][2]['distance'] = 400
+	G[2][3]['distance'] = 500
+	G[3][4]['distance'] = 700
 def getGtau(G):
 	for (u,v) in G.edges():
 		for k in modes:
@@ -78,6 +79,7 @@ def getGf(G):
 				G[u][v]['f',k] = int(1500 * G[u][v]['distance']/ unit)
 			if k == 4:
 				G[u][v]['f',k] = int(2000 * G[u][v]['distance']/ unit)
+			# print "#"*20,u,k,G[u][v]['f',k]
 def getGST(G):
 	for (u,v) in G.edges():
 		G[u][v]['ST'] = 1
@@ -110,7 +112,7 @@ def getGdT(G):
 	G[3][4]['dT',4,2] = 10
 ending_time = {}
 customer = []
-d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_5_13.csv')
+d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_200_6.csv')
 # d = pd.read_csv('C:\Users\MacBook Air\Desktop\my research\cus_50_21.csv',header=None)
 customer = d.values.tolist()
 # customer = customer_shuffle(5,customer)
@@ -118,13 +120,23 @@ customer = customer_bigtosmall(customer)
 # customer = customer_smalltobig(customer)
 # customer = customer_DpDD(customer)
 # customer = customer_DpDDshuffle(6,customer)
+# print customer, 'customer'
 #Distance: each arc distance
 # G[u][v]['distance'] = {}
 getGdistance(G)
+# for (u,v) in G.edges():
+# 	print G[u][v]['distance']
 #CAPACITY
 getGC(G,fix_C)
+# for (u,v) in G.edges():
+# 	for k in modes:
+# 		for s in departure:
+# 			print G[u][v]['C',k,s]
 #tau: each mode at each arc transportation time
 getGtau(G)
+# for (u,v) in G.edges():
+# 	for k in modes:
+# 		print G[u][v]['tau',k]
 #f: unit cost of mode at each arc
 getGf(G)
 # time of 3PL
