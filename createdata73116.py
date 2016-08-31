@@ -14,6 +14,6 @@ def generate_cutomer_data(size_of_customer):
         # data.loc[i] = [i, 'SS', uniform_dist(50, 250), uniform_dist(6, 35), 50]
         data.loc[i] = [i, 'SS', uniform_dist(50, 250), uniform_dist(11, 65), 50]
     return data
-size_of_customer = 20
+size_of_customer = 30
 d = generate_cutomer_data(size_of_customer)
-d.to_csv('C:\Users\MacBook Air\Desktop\my research\cus_20_15.csv', index=False)
+d.to_csv('C:\Users\MacBook Air\Desktop\my research\cus_30_10.csv', index=False)
