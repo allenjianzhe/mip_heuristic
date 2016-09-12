@@ -16,4 +16,4 @@ def generate_cutomer_data(size_of_customer):
     return data
 size_of_customer = 30
 d = generate_cutomer_data(size_of_customer)
-d.to_csv('C:\Users\MacBook Air\Desktop\my research\cus_30_10.csv', index=False)
+d.to_csv('C:\Users\MacBook Air\Desktop\my research\cus_30_12.csv', index=False)
